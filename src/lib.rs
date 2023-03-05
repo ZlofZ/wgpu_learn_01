@@ -8,7 +8,7 @@ use winit::window::Window;
 #[derive(Copy, Clone, Debug, bytemuck::Pod, bytemuck::Zeroable)]
 struct Vertex {
 	position: [f32; 3],
-	color: [f32; 3],
+	tex_coords: [f32; 2],
 }
 
 impl Vertex {
@@ -25,7 +25,7 @@ impl Vertex {
 				wgpu::VertexAttribute {
 					offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
 					shader_location: 1,
-					format: wgpu::VertexFormat::Float32x3,
+					format: wgpu::VertexFormat::Float32x2,
 				}
 			]
 		}
@@ -34,33 +34,18 @@ impl Vertex {
 
 const VERTICES: &[Vertex] = &[
 
-	Vertex { position: [-0.0868241, 0.49240386, 0.0], color: [0.5, 0.0, 0.5] }, // A
-	Vertex { position: [-0.49513406, 0.06958647, 0.0], color: [0.5, 0.0, 0.5] }, // B
-	Vertex { position: [-0.21918549, -0.44939706, 0.0], color: [0.5, 0.0, 0.5] }, // C
-	Vertex { position: [0.35966998, -0.3473291, 0.0], color: [0.5, 0.0, 0.5] }, // D
-	Vertex { position: [0.44147372, 0.2347359, 0.0], color: [0.5, 0.0, 0.5] }, // E
-
-    Vertex { position: [0.2, 0.2, 0.0], color: [0.5, 0.0, 0.5] }, // 5
-    Vertex { position: [-0.2, 0.2, 0.0], color: [0.5, 0.0, 0.5] }, // 6
-    Vertex { position: [0.2, -0.2, 0.0], color: [0.5, 0.0, 0.5] }, // 7
-    Vertex { position: [-0.2, -0.2, 0.0], color: [0.5, 0.0, 0.5] }, // 8
-
-    Vertex { position: [0.3, 0.3, 0.0], color: [0.15, 0.0, 0.15] }, // 9
-    Vertex { position: [0.3, -0.1, 0.0], color: [0.15, 0.0, 0.15] }, // 10
+Vertex { position: [-0.0868241, 0.49240386, 0.0], tex_coords: [0.4131759, 1.0-0.99240386], }, // A
+Vertex { position: [-0.49513406, 0.06958647, 0.0], tex_coords: [0.0048659444, 1.0-0.56958647], }, // B
+Vertex { position: [-0.21918549, -0.44939706, 0.0], tex_coords: [0.28081453, 1.0-0.05060294], }, // C
+Vertex { position: [0.35966998, -0.3473291, 0.0], tex_coords: [0.85967, 1.0-0.1526709], }, // D
+Vertex { position: [0.44147372, 0.2347359, 0.0], tex_coords: [0.9414737, 1.0-0.7347359], }, // E
 	
-    Vertex { position: [-0.1, 0.3, 0.0], color: [0.15, 0.0, 0.15] }, // 11
-	
-
 ];
 
 const INDICES: &[u16] = &[
-
-	5, 6, 7,
-	6, 8, 7,
-	5, 7, 9,
-	9, 7, 10,
-	11, 6, 5,
-	11, 5, 9,
+	0, 1, 4,
+	1, 2, 4,
+	2, 3, 4,
 ];
 struct State {
     surface: wgpu::Surface,
@@ -74,6 +59,7 @@ struct State {
 	vertex_buffer: wgpu::Buffer,
 	index_buffer: wgpu::Buffer,
 	num_indices: u32,
+	diffuse_bind_group: wgpu::BindGroup,
 }
 
 impl State {
@@ -205,7 +191,47 @@ impl State {
 			mipmap_filter: wgpu::FilterMode::Nearest,
 			..Default::default()
 		});
-		
+
+		let texture_bind_group_layout = device.create_bind_group_layout(
+			&wgpu::BindGroupLayoutDescriptor { 
+				label: Some("texture_binding_group_layout"),
+				entries: &[
+					wgpu::BindGroupLayoutEntry {
+						binding: 0,
+						visibility: wgpu::ShaderStages::FRAGMENT,
+						ty: wgpu::BindingType::Texture {
+							sample_type: wgpu::TextureSampleType::Float { filterable: true },
+							view_dimension: wgpu::TextureViewDimension::D2,
+							multisampled: false
+						},
+						count: None,
+					},
+					wgpu::BindGroupLayoutEntry {
+						binding: 1,
+						visibility: wgpu::ShaderStages::FRAGMENT,
+						ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+						count: None,
+					},
+				],
+			}
+		);
+
+		let diffuse_bind_group = device.create_bind_group(
+			&wgpu::BindGroupDescriptor {
+				layout: &texture_bind_group_layout,
+				entries: &[
+					wgpu::BindGroupEntry {
+						binding: 0,
+						resource: wgpu::BindingResource::TextureView(&diffuse_texture_view),
+					},
+					wgpu::BindGroupEntry {
+						binding: 1,
+						resource: wgpu::BindingResource::Sampler(&diffuse_sampler),
+					},
+				],
+				label: Some("diffuse_bind_group"),
+			}
+		);
 
         let bg_color = wgpu::Color {
 			r: 0.005,
@@ -222,7 +248,7 @@ impl State {
 		let render_pipeline_layout =
 			device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
 				label: Some("Render Pipeline Layout"),
-				bind_group_layouts: &[],
+				bind_group_layouts: &[&texture_bind_group_layout],
 				push_constant_ranges: &[],
 			});
 
@@ -295,6 +321,7 @@ impl State {
 			vertex_buffer,
 			index_buffer,
 			num_indices,
+			diffuse_bind_group,
         }
     }
 
@@ -359,8 +386,10 @@ impl State {
 
 			
 			render_pass.set_pipeline(&self.render_pipeline);
+			render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
 			render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
 			render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+
 			render_pass.draw_indexed(0..self.num_indices, 0, 0..1);
 
         }
