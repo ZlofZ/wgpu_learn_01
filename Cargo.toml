@@ -13,6 +13,10 @@ wgpu = "0.15"
 pollster = "0.2"
 bytemuck = { version = "1.12", features = [ "derive" ] }
 
+[dependencies.image]
+version = "0.24"
+default-features = true
+features = ["png", "jpeg"]
 
 [lib]
 crate-type = ["rlib"]
