@@ -379,6 +379,8 @@ impl State {
 			}
 		);
 
+		let depth_texture = texture::Texture::create_depth_texture(&device, &config, "depth_texture");
+
         let bg_color = wgpu::Color {
 			r: 0.005,
 			g: 0.005,
