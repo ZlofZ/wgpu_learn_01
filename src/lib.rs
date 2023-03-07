@@ -11,7 +11,7 @@ mod texture;
 mod model;
 mod camera_controller;
 
-use model::Vertex;
+use model::{Vertex, DrawModel};
 
 // lib.rs
 
@@ -205,7 +205,7 @@ impl State {
         };
         surface.configure(&device, &config);
         
-		let diffuse_bytes = include_bytes!("happy-tree.png");
+		let diffuse_bytes = include_bytes!("DiCaprio1.jpg");
 
 		let diffuse_texture = texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "happy tree").unwrap();
 
@@ -306,7 +306,7 @@ impl State {
 			}
 		);
 
-		let camera_controller = CameraController::new(0.2);
+		let camera_controller = CameraController::new(0.6);
 
 		const NUM_INSTANCES_PER_ROW: u32 = 10;
 		const INSTANCE_DISPLACEMENT: cgmath::Vector3<f32> = cgmath::Vector3::new(NUM_INSTANCES_PER_ROW as f32 * 0.5, 0.0, NUM_INSTANCES_PER_ROW as f32 * 0.5);
@@ -510,19 +510,18 @@ impl State {
 			
 			render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
 			render_pass.set_pipeline(&self.render_pipeline);
-			render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
-			render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
-
+			render_pass.draw_model_instanced(&self.obj_model, 0..self.instances.len() as u32, &self.camera_bind_group);
 			
+
+
+
+//			render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
+//			render_pass.set_bind_group(1, &self.camera_bind_group, &[]);			
 //			render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
 //			render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
 //			render_pass.draw_indexed(0..self.num_indices, 0, 0..self.instances.len() as _);
 
-			use model::DrawModel;
-			render_pass.draw_mesh_instanced(
-				&self.obj_model.meshes[0],
-				0..self.instances.len() as u32
-			)
+			
 
         }
         
