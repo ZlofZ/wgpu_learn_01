@@ -127,3 +127,4 @@ impl Texture {
         Ok(Self { texture, view, sampler })
     }
 }
+
