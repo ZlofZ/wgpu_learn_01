@@ -182,7 +182,7 @@ struct State {
 	camera_controller: camera_controller::CameraController,
 	instances: Vec<Instance>,
 	instance_buffer: wgpu::Buffer,
-	depth_texture: Texture,
+	depth_texture: texture::Texture,
 }
 
 impl State {
