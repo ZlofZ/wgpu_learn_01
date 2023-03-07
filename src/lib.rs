@@ -130,7 +130,6 @@ struct State {
     window: Window,
     bg_color: wgpu::Color,
 	render_pipeline: wgpu::RenderPipeline,
-	diffuse_bind_group: wgpu::BindGroup,
 	camera: Camera,
 	camera_uniform: CameraUniform,
 	camera_buffer: wgpu::Buffer,
@@ -204,10 +203,6 @@ impl State {
         	view_formats: vec![],
         };
         surface.configure(&device, &config);
-        
-		let diffuse_bytes = include_bytes!("DiCaprio1.jpg");
-
-		let diffuse_texture = texture::Texture::from_bytes(&device, &queue, diffuse_bytes, "happy tree").unwrap();
 
 		let texture_bind_group_layout = device.create_bind_group_layout(
 			&wgpu::BindGroupLayoutDescriptor { 
@@ -230,23 +225,6 @@ impl State {
 						count: None,
 					},
 				],
-			}
-		);
-
-		let diffuse_bind_group = device.create_bind_group(
-			&wgpu::BindGroupDescriptor {
-				layout: &texture_bind_group_layout,
-				entries: &[
-					wgpu::BindGroupEntry {
-						binding: 0,
-						resource: wgpu::BindingResource::TextureView(&diffuse_texture.view),
-					},
-					wgpu::BindGroupEntry {
-						binding: 1,
-						resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
-					},
-				],
-				label: Some("diffuse_bind_group"),
 			}
 		);
 
@@ -424,7 +402,6 @@ impl State {
             size,
             bg_color,
 			render_pipeline,
-			diffuse_bind_group,
 			camera,
 			camera_uniform,
 			camera_buffer,
@@ -507,22 +484,9 @@ impl State {
 				}),
         	});
 
-			
 			render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
 			render_pass.set_pipeline(&self.render_pipeline);
 			render_pass.draw_model_instanced(&self.obj_model, 0..self.instances.len() as u32, &self.camera_bind_group);
-			
-
-
-
-//			render_pass.set_bind_group(0, &self.diffuse_bind_group, &[]);
-//			render_pass.set_bind_group(1, &self.camera_bind_group, &[]);			
-//			render_pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-//			render_pass.set_index_buffer(self.index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-//			render_pass.draw_indexed(0..self.num_indices, 0, 0..self.instances.len() as _);
-
-			
-
         }
         
         self.queue.submit(std::iter::once(encoder.finish()));
@@ -531,8 +495,6 @@ impl State {
         Ok(())
     }
 }
-
-
 
 use winit::{
     event::*,
