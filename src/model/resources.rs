@@ -3,7 +3,7 @@ use std::io::{Cursor, BufReader};
 use anyhow::Ok;
 use wgpu::util::DeviceExt;
 
-use crate::{texture, model};
+use crate::model;
 
 
 pub async fn load_model(
@@ -25,12 +25,16 @@ pub async fn load_model(
         },
         |p| async move {
             let mat_text = load_string(&p).await.unwrap();
+            //println!("{}", mat_text);
             tobj::load_mtl_buf(&mut BufReader::new(Cursor::new(mat_text)))
         },
     ).await?;
 
+    println!("after load obj bufsync");
+
     let mut materials = Vec::new();
     for m in obj_materials? {
+        println!("materialname: {}, {}", m.name,m.diffuse_texture);
         let diffuse_texture = load_texture(&m.diffuse_texture, device, queue).await?;
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             layout,
@@ -46,7 +50,7 @@ pub async fn load_model(
             ],
             label: None,
         });
-
+        println!("Material Name: {}", m.name);
         materials.push(model::Material {
             name: m.name,
             diffuse_texture,
@@ -100,6 +104,7 @@ pub async fn load_model(
 }
 
 pub async fn load_string(file_name: &str) -> anyhow::Result<String> {
+    println!("filename: {}", file_name);
     let path = std::path::Path::new(env!("OUT_DIR"))
         .join("res")
         .join(file_name);
@@ -121,7 +126,7 @@ pub async fn load_texture(
     file_name: &str,
     device:&wgpu::Device,
     queue: &wgpu::Queue,
-) -> anyhow::Result<texture::Texture> {
+) -> anyhow::Result<model::texture::Texture> {
     let data = load_binary(file_name).await?;
-    texture::Texture::from_bytes(device, queue, &data, file_name)
+    model::texture::Texture::from_bytes(device, queue, &data, file_name)
 }
