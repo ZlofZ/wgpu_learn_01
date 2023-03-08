@@ -2,3 +2,4 @@ Cargo.lock
 .vscode/
 target/
 src/DiCaprio1.jpg
+wgpu_learn_01.code-workspace

@@ -8,7 +8,7 @@ mod model;
 mod camera;
 
 use model::{Vertex, DrawModel};
-use camera::{Camera, CameraController};
+use camera::{Camera, CameraController, CameraUniform};
 
 // lib.rs
 
@@ -19,9 +19,6 @@ pub const OPENGL_TO_WGPU_MATRIX: cgmath::Matrix4<f32> = cgmath::Matrix4::new(
 	0.0, 0.0, 0.5, 0.0,
 	0.0, 0.0, 0.5, 1.0,
 );
-
-
-
 
 struct Instance {
 	position: cgmath::Vector3<f32>,
@@ -93,7 +90,7 @@ struct State {
 	camera_uniform: CameraUniform,
 	camera_buffer: wgpu::Buffer,
 	camera_bind_group: wgpu::BindGroup,
-	camera_controller: camera_controller::CameraController,
+	camera_controller: CameraController,
 	instances: Vec<Instance>,
 	instance_buffer: wgpu::Buffer,
 	depth_texture: texture::Texture,

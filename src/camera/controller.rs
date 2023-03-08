@@ -1,7 +1,5 @@
 use winit::event::{WindowEvent, KeyboardInput, ElementState, VirtualKeyCode};
 
-use crate::Camera;
-
 pub struct CameraController {
     speed: f32,
     is_forward_pressed: bool,

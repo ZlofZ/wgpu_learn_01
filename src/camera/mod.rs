@@ -1,5 +1,7 @@
 mod controller;
-
+pub use controller::CameraController;
+mod uniform;
+pub use uniform::CameraUniform;
 
 pub struct Camera {
 	eye: cgmath::Point3<f32>,
