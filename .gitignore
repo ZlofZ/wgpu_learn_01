@@ -3,3 +3,5 @@ Cargo.lock
 target/
 src/DiCaprio1.jpg
 wgpu_learn_01.code-workspace
+res/SceneTrackmania.mtl
+res/SceneTrackmania.obj
