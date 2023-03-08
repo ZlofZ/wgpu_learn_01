@@ -2,7 +2,7 @@ use winit::{window::Window, event::{WindowEvent, KeyboardInput, ElementState, Vi
 use cgmath::prelude::*;
 use wgpu::util::DeviceExt;
 
-use crate::{camera::{Camera, CameraUniform, CameraController, self}, model::{DrawModel,Model, instance::{self, Instance}, texture, resources}, state};
+use crate::{camera::{Camera, CameraUniform, CameraController, self}, model::{DrawModel,Model, instance::{self, Instance}, texture, resources, light::{self, DrawLight}}, state};
 
 pub mod renderer;
 
@@ -21,6 +21,10 @@ pub(crate) struct State {
 	camera_buffer: wgpu::Buffer,
 	camera_bind_group: wgpu::BindGroup,
 	camera_controller: CameraController,
+	light_uniform: light::LightUniform,
+	light_buffer: wgpu::Buffer,
+	light_bind_group: wgpu::BindGroup,
+	light_render_pipeline: wgpu::RenderPipeline,
 	instances: Vec<instance::Instance>,
 	instance_buffer: wgpu::Buffer,
 	depth_texture: texture::Texture,
@@ -89,6 +93,12 @@ impl State {
 		let camera_bind_group = camera::create_camera_bind_group(&device, &camera_bind_group_layout, &camera_buffer);
 		let camera_controller = CameraController::new(0.6);
 
+		let light_uniform = light::create_light_uniform();
+		let light_buffer = light::create_light_buffer(&device, &light_uniform);
+		let light_bind_group_layout = light::create_light_bind_group_layout(&device);
+		let light_bind_group = light::create_light_bind_group(&device, &light_bind_group_layout, &light_buffer);
+		let light_render_pipeline = light::create_light_render_pipeline(&device, &config, &camera_bind_group_layout, &light_bind_group_layout);
+		
 		const NUM_INSTANCES_PER_ROW: u32 = 10;
 		const INSTANCE_DISPLACEMENT: cgmath::Vector3<f32> = cgmath::Vector3::new(NUM_INSTANCES_PER_ROW as f32 * 0.5, 0.0, NUM_INSTANCES_PER_ROW as f32 * 0.5);
 		const SPACE_BETWEEN: f32 = 3.0;
@@ -135,9 +145,9 @@ impl State {
 			source: wgpu::ShaderSource::Wgsl(include_str!("../shader.wgsl").into()),
 		});
 
-		let render_pipeline_layout = state::renderer::create_render_pipeline_layout(&device, &texture_bind_group_layout, &camera_bind_group_layout);
+		let render_pipeline_layout = state::renderer::create_render_pipeline_layout(&device, &texture_bind_group_layout, &camera_bind_group_layout, &light_bind_group_layout);
 
-		let render_pipeline = state::renderer::create_render_pipeline(&device, &render_pipeline_layout, &shader, &config);
+		let render_pipeline = state::renderer::create_render_pipeline(&device, &render_pipeline_layout, &shader, &config, Some("Default Render Pipeline"));
 		 
 		let obj_model =
 			resources::load_model("SceneTrackmania.obj", &device, &queue, &texture_bind_group_layout)
@@ -159,6 +169,10 @@ impl State {
 			camera_buffer,
 			camera_bind_group,
 			camera_controller,
+			light_uniform,
+			light_buffer,
+			light_bind_group,
+			light_render_pipeline,
 			instances,
 			instance_buffer,
 			depth_texture,
@@ -203,6 +217,10 @@ impl State {
         self.camera_controller.update_camera(&mut self.camera);
 		self.camera_uniform.update_view_proj(&self.camera);
 		self.queue.write_buffer(&self.camera_buffer, 0, bytemuck::cast_slice(&[self.camera_uniform]));
+
+		light::update_light(&mut self.light_uniform);
+		self.queue.write_buffer(&self.light_buffer, 0, bytemuck::cast_slice(&[self.light_uniform]));
+		
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
@@ -237,9 +255,23 @@ impl State {
         	});
 
 			render_pass.set_vertex_buffer(1, self.instance_buffer.slice(..));
+			render_pass.set_pipeline(&self.light_render_pipeline);
+			render_pass.draw_light_model(
+				&self.obj_model,
+				&self.camera_bind_group,
+				&self.light_bind_group,
+			);
+			
 			render_pass.set_pipeline(&self.render_pipeline);
-			render_pass.draw_model_instanced(&self.obj_model, 0..self.instances.len() as u32, &self.camera_bind_group);
-        }
+			render_pass.draw_model_instanced(
+				&self.obj_model,
+				0..self.instances.len() as u32,
+				&self.camera_bind_group,
+				&self.light_bind_group
+			);
+			
+
+		}
         
         self.queue.submit(std::iter::once(encoder.finish()));
         output.present();

@@ -24,20 +24,21 @@ pub fn create_surface_config(size: &PhysicalSize<u32>, surface_caps: &wgpu::Surf
     }
 }
 
-pub fn create_render_pipeline_layout(device: &wgpu::Device, texture_bind_group_layout: &wgpu::BindGroupLayout, camera_bind_group_layout: &wgpu::BindGroupLayout) -> wgpu::PipelineLayout {
+pub fn create_render_pipeline_layout(device: &wgpu::Device, texture_bind_group_layout: &wgpu::BindGroupLayout, camera_bind_group_layout: &wgpu::BindGroupLayout, light_bind_group_layout: &wgpu::BindGroupLayout) -> wgpu::PipelineLayout {
     device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("Render Pipeline Layout"),
         bind_group_layouts: &[
             &texture_bind_group_layout,
             &camera_bind_group_layout,
+            &light_bind_group_layout,
         ],
         push_constant_ranges: &[],
     })
 }
 
-pub fn create_render_pipeline(device: &wgpu::Device, render_pipeline_layout: &wgpu::PipelineLayout, shader: &wgpu::ShaderModule, config: &wgpu::SurfaceConfiguration) -> wgpu::RenderPipeline {
+pub fn create_render_pipeline(device: &wgpu::Device, render_pipeline_layout: &wgpu::PipelineLayout, shader: &wgpu::ShaderModule, config: &wgpu::SurfaceConfiguration, label: Option<&str>) -> wgpu::RenderPipeline {
     device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-        label: Some("Render Pipeline"),
+        label: label,
         layout: Some(&render_pipeline_layout),
         vertex: wgpu::VertexState {
             module: &shader,
