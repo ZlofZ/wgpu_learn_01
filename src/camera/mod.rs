@@ -5,11 +5,11 @@ mod uniform;
 pub use uniform::CameraUniform;
 
 
-pub fn create_camera_buffer(device: &wgpu::Device, camera_uniform: &CameraUniform) -> wgpu::Buffer {
+pub fn create_camera_buffer(device: &wgpu::Device, camera_uniform: CameraUniform) -> wgpu::Buffer {
 	device.create_buffer_init(
 		&wgpu::util::BufferInitDescriptor {
 			label: Some("Camera Buffer"),
-			contents: bytemuck::cast_slice(&[*camera_uniform]),
+			contents: bytemuck::cast_slice(&[camera_uniform]),
 			usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
 		}
 	)
@@ -21,7 +21,9 @@ pub fn create_camera_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroup
 			entries: &[
 				wgpu::BindGroupLayoutEntry {
 					binding: 0,
-					visibility: wgpu::ShaderStages::VERTEX,
+					visibility:
+						wgpu::ShaderStages::VERTEX |
+						wgpu::ShaderStages::FRAGMENT,
 					ty: wgpu::BindingType::Buffer {
 						ty: wgpu::BufferBindingType::Uniform,
 						has_dynamic_offset: false,
@@ -63,7 +65,7 @@ pub fn create_camera(config: &wgpu::SurfaceConfiguration) -> Camera {
 	Camera::new(
 		// position the camera one unit up and 2 units back
 		// +z is out of the screen
-		(0.0, 1.0, 2.0).into(),
+		(0.0, 1.0, 5.0).into(),
 		// have it look at the origin
 		(0.0, 0.0, 0.0).into(),
 		// which way is "up"

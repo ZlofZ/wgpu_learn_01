@@ -8,6 +8,8 @@ pub struct CameraController {
     is_backward_pressed: bool,
     is_left_pressed: bool,
     is_right_pressed: bool,
+    is_up_pressed: bool,
+    is_down_pressed: bool,
 }
 
 impl CameraController {
@@ -18,6 +20,8 @@ impl CameraController {
             is_backward_pressed: false,
             is_left_pressed: false,
             is_right_pressed: false,
+            is_up_pressed: false,
+            is_down_pressed: false,
         }
     }
 
@@ -49,10 +53,21 @@ impl CameraController {
                         self.is_right_pressed = is_pressed;
                         true
                     }
-                    _ => false,
+                    VirtualKeyCode::E => {
+                        self.is_up_pressed = is_pressed;
+                        true
+                    }
+                    VirtualKeyCode::Q => {
+                        self.is_down_pressed = is_pressed;
+                        true
+                    }
+                    _ => {
+                        println!("{:?}",keycode);
+                        false
+                    }
                 }
             }
-            _ => false,
+            _ => false
         }
     }
 
@@ -72,7 +87,7 @@ impl CameraController {
         }
 
         let right = forward_norm.cross(camera.up);
-
+        let horizontal = forward_norm.cross(right);
         // Redo radius calc in case the fowrard/backward is pressed.
         let forward = camera.target - camera.eye;
         let forward_mag = forward.magnitude();
@@ -85,6 +100,13 @@ impl CameraController {
         }
         if self.is_left_pressed {
             camera.eye = camera.target - (forward - right * self.speed).normalize() * forward_mag;
+        }
+
+        if self.is_up_pressed {
+            camera.eye = camera.target - (forward + horizontal * self.speed).normalize() * forward_mag;
+        }
+        if self.is_down_pressed {
+            camera.eye = camera.target - (forward - horizontal * self.speed).normalize() * forward_mag;
         }
     }
 }

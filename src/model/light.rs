@@ -5,8 +5,7 @@ use wgpu::util::DeviceExt;
 
 use crate::state;
 
-use super::{Mesh, Model};
-
+use super::{Mesh, Model, texture, ModelVertex, Vertex};
 
 pub trait DrawLight<'a> {
     fn draw_light_mesh(
@@ -106,25 +105,25 @@ pub struct LightUniform {
 pub fn update_light(light_uniform: &mut LightUniform) {
     let old_position: cgmath::Vector3<_> = light_uniform.position.into();
     light_uniform.position = (
-        cgmath::Quaternion::from_axis_angle((0.0, 1.0, 0.0).into(), cgmath::Deg(1.0))
+        cgmath::Quaternion::from_axis_angle((0.0, 1.0, 0.0).into(), cgmath::Deg(0.0))
             * old_position
     ).into();
 }
 
 pub fn create_light_uniform() -> LightUniform {
     LightUniform {
-        position: [2.0, 2.0, 2.0],
+        position: [15.0, 3.0, 0.0],
         _padding: 0,
-        color: [1.0, 1.0, 1.0],
+        color: [1.0, 0.8, 0.8],
         _padding2: 0,
     }
 }
 
-pub fn create_light_buffer(device: &wgpu::Device, light_uniform: &LightUniform) -> wgpu::Buffer {
+pub fn create_light_buffer(device: &wgpu::Device, light_uniform: LightUniform) -> wgpu::Buffer {
     device.create_buffer_init(
         &wgpu::util::BufferInitDescriptor {
             label: Some("Light VB"),
-            contents: bytemuck::cast_slice(&[*light_uniform]),
+            contents: bytemuck::cast_slice(&[light_uniform]),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         }
     )   
@@ -171,17 +170,19 @@ pub fn create_light_render_pipeline(device: &wgpu::Device, config: &wgpu::Surfac
         push_constant_ranges: &[],
     });
 
-    let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor { 
+    let shader = wgpu::ShaderModuleDescriptor { 
         label: Some("Light Shader"),
         source: wgpu::ShaderSource::Wgsl(include_str!("../light.wgsl").into()),
-    });
+    };
 
 
     state::renderer::create_render_pipeline(
         &device,
         &layout,
-        &shader,
-        &config,
+        config.format,
+        Some(texture::Texture::DEPTH_FORMAT),
+        &[ModelVertex::desc()],
+        shader,
         Some("Light Render Pipeline"),
     )
 

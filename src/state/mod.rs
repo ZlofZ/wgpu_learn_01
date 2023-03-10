@@ -2,7 +2,7 @@ use winit::{window::Window, event::{WindowEvent, KeyboardInput, ElementState, Vi
 use cgmath::prelude::*;
 use wgpu::util::DeviceExt;
 
-use crate::{camera::{Camera, CameraUniform, CameraController, self}, model::{DrawModel,Model, instance::{self, Instance}, texture, resources, light::{self, DrawLight}}, state};
+use crate::{camera::{Camera, CameraUniform, CameraController, self}, model::{DrawModel,Model, instance::{self, Instance, InstanceRaw}, texture, resources, light::{self, DrawLight}, self, Vertex}, state};
 
 pub mod renderer;
 
@@ -88,18 +88,12 @@ impl State {
 
 		let mut camera_uniform = CameraUniform::new();
 		camera_uniform.update_view_proj(&camera);
-		let camera_buffer = camera::create_camera_buffer(&device, &camera_uniform);
+		let camera_buffer = camera::create_camera_buffer(&device, camera_uniform);
 		let camera_bind_group_layout = camera::create_camera_bind_group_layout(&device);
 		let camera_bind_group = camera::create_camera_bind_group(&device, &camera_bind_group_layout, &camera_buffer);
 		let camera_controller = CameraController::new(0.6);
 
-		let light_uniform = light::create_light_uniform();
-		let light_buffer = light::create_light_buffer(&device, &light_uniform);
-		let light_bind_group_layout = light::create_light_bind_group_layout(&device);
-		let light_bind_group = light::create_light_bind_group(&device, &light_bind_group_layout, &light_buffer);
-		let light_render_pipeline = light::create_light_render_pipeline(&device, &config, &camera_bind_group_layout, &light_bind_group_layout);
-		
-		const NUM_INSTANCES_PER_ROW: u32 = 10;
+		const NUM_INSTANCES_PER_ROW: u32 = 1;
 		const INSTANCE_DISPLACEMENT: cgmath::Vector3<f32> = cgmath::Vector3::new(NUM_INSTANCES_PER_ROW as f32 * 0.5, 0.0, NUM_INSTANCES_PER_ROW as f32 * 0.5);
 		const SPACE_BETWEEN: f32 = 3.0;
 
@@ -110,11 +104,7 @@ impl State {
 				
 				let position = cgmath::Vector3 { x, y: 0.0, z};// - INSTANCE_DISPLACEMENT;
 				
-				let rotation = if position.is_zero() {
-					cgmath::Quaternion::from_axis_angle(cgmath::Vector3::unit_z(),cgmath::Deg(0.0))
-				} else {
-					cgmath::Quaternion::from_axis_angle( position.normalize(),cgmath::Deg(45.0))
-				};
+				let rotation = cgmath::Quaternion::from_axis_angle((0.0, 1.0, 0.0).into(), cgmath::Deg(0.0));
 
 				instance::Instance {
 					position, rotation,
@@ -140,20 +130,36 @@ impl State {
 			a: 1.0,
 		};
         
-		let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-			label: Some("Shader"),
+		let shader = wgpu::ShaderModuleDescriptor {
+			label: Some("Normal Shader"),
 			source: wgpu::ShaderSource::Wgsl(include_str!("../shader.wgsl").into()),
-		});
+		};
+		
+		let light_uniform = light::create_light_uniform();
+		let light_buffer = light::create_light_buffer(&device, light_uniform);
+		let light_bind_group_layout = light::create_light_bind_group_layout(&device);
+		let light_bind_group = light::create_light_bind_group(&device, &light_bind_group_layout, &light_buffer);
+		let light_render_pipeline = light::create_light_render_pipeline(&device, &config, &camera_bind_group_layout, &light_bind_group_layout);
 
 		let render_pipeline_layout = state::renderer::create_render_pipeline_layout(&device, &texture_bind_group_layout, &camera_bind_group_layout, &light_bind_group_layout);
 
-		let render_pipeline = state::renderer::create_render_pipeline(&device, &render_pipeline_layout, &shader, &config, Some("Default Render Pipeline"));
+		let render_pipeline = state::renderer::create_render_pipeline(
+			&device,
+			&render_pipeline_layout,
+			config.format,
+			Some(texture::Texture::DEPTH_FORMAT),
+			&[model::ModelVertex::desc(), model::instance::InstanceRaw::desc()],
+			shader,
+			Some("Default Render Pipeline")
+		);
 		 
 		let obj_model =
 			resources::load_model("SceneTrackmania.obj", &device, &queue, &texture_bind_group_layout)
 				.await
 				.unwrap();
 
+
+		
         //return
         Self {
             window,
@@ -220,7 +226,20 @@ impl State {
 
 		light::update_light(&mut self.light_uniform);
 		self.queue.write_buffer(&self.light_buffer, 0, bytemuck::cast_slice(&[self.light_uniform]));
-		
+		let mut instance_data: Vec<InstanceRaw> = Vec::new();
+		for temp_instance in self.instances.iter_mut() {
+			temp_instance.rotation = temp_instance.rotation * cgmath::Quaternion::from_axis_angle((0.0, 1.0, 0.0).into(), cgmath::Deg(1.0));
+			instance_data.push(temp_instance.to_raw());
+		}
+
+		self.instance_buffer = self.device.create_buffer_init(
+			&wgpu::util::BufferInitDescriptor {
+				label: Some("Instance Buffer"),
+				contents: bytemuck::cast_slice(&instance_data),
+				usage: wgpu::BufferUsages::VERTEX,
+			}
+		);
+
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {

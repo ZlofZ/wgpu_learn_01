@@ -1,8 +1,5 @@
 //mod model;
-use model::Vertex;
 use winit::dpi::PhysicalSize;
-
-use crate::{model::{instance, texture, self}};
 
 pub fn create_surface_format(surface_caps: &wgpu::SurfaceCapabilities) -> wgpu::TextureFormat {
     surface_caps.formats.iter()
@@ -36,39 +33,50 @@ pub fn create_render_pipeline_layout(device: &wgpu::Device, texture_bind_group_l
     })
 }
 
-pub fn create_render_pipeline(device: &wgpu::Device, render_pipeline_layout: &wgpu::PipelineLayout, shader: &wgpu::ShaderModule, config: &wgpu::SurfaceConfiguration, label: Option<&str>) -> wgpu::RenderPipeline {
+pub fn create_render_pipeline(
+    device: &wgpu::Device,
+    layout: &wgpu::PipelineLayout,
+    color_format: wgpu::TextureFormat,
+    depth_format: Option<wgpu::TextureFormat>,
+    vertex_layouts: &[wgpu::VertexBufferLayout],
+    shader: wgpu::ShaderModuleDescriptor,
+    label: Option<&str>
+) -> wgpu::RenderPipeline {
+    let shader = device.create_shader_module(shader);
+
     device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         label: label,
-        layout: Some(&render_pipeline_layout),
+        layout: Some(layout),
         vertex: wgpu::VertexState {
             module: &shader,
             entry_point: "vs_main",					// vertex shader entrypoint
-            buffers: &[
-                model::ModelVertex::desc(),
-                instance::InstanceRaw::desc(),
-            ],							// vertex types?
+            buffers: vertex_layouts,							// vertex types?
         },
         fragment: Some(wgpu::FragmentState {		//optional?
             module: &shader,
             entry_point: "fs_main",					// fragment shader entrypoint
-            targets:								// what color outputs to use
-                &[Some(wgpu::ColorTargetState {
-                    format: config.format,
-                    blend: Some(wgpu::BlendState::REPLACE),		// just replace old pixel data
-                     write_mask: wgpu::ColorWrites::ALL,			// write to all color-channels
-                })],
+            targets: &[
+                Some(wgpu::ColorTargetState {			// what color outputs to use 
+                    format: color_format,
+                    blend: Some(wgpu::BlendState{
+                        alpha: wgpu::BlendComponent::REPLACE,    // just replace old pixel data
+                        color: wgpu::BlendComponent::REPLACE,
+                    }),		
+                    write_mask: wgpu::ColorWrites::ALL,			// write to all color-channels
+                }),
+            ],
         }),
         primitive: wgpu::PrimitiveState {						// how to interpret vertices
             topology: wgpu::PrimitiveTopology::TriangleList,	// every three vertices = 1 triangle
             strip_index_format: None,
             front_face: wgpu::FrontFace::Ccw,					// if arranged counterclockwise triangle is facing forwards
             cull_mode: Some(wgpu::Face::Back),					// exclude triangles facing backwards
-            unclipped_depth: false,
             polygon_mode: wgpu::PolygonMode::Fill,
+            unclipped_depth: false,
             conservative: false,
         },
-        depth_stencil: Some(wgpu::DepthStencilState {
-            format: texture::Texture::DEPTH_FORMAT,
+        depth_stencil: depth_format.map(|format| wgpu::DepthStencilState {
+            format,
             depth_write_enabled: true,
             depth_compare: wgpu::CompareFunction::Less,
             stencil: wgpu::StencilState::default(),
