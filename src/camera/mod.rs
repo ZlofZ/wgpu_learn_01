@@ -65,7 +65,7 @@ pub fn create_camera(config: &wgpu::SurfaceConfiguration) -> Camera {
 	Camera::new(
 		// position the camera one unit up and 2 units back
 		// +z is out of the screen
-		(0.0, 1.0, 5.0).into(),
+		(0.0, 10.0, 0.1).into(),
 		// have it look at the origin
 		(0.0, 0.0, 0.0).into(),
 		// which way is "up"

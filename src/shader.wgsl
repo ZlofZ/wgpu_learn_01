@@ -33,6 +33,10 @@ struct VertexOutput {
 var t_diffuse: texture_2d<f32>;
 @group(0) @binding(1)
 var s_diffuse: sampler;
+@group(0) @binding(2)
+var t_normal: texture_2d<f32>;
+@group(0) @binding(3)
+var s_normal: sampler;
 @group(1) @binding(0)
 var<uniform> camera: Camera;
 @group(2) @binding(0)
@@ -70,18 +74,21 @@ fn vs_main(
 @fragment                    //store in first color target 
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     let object_color: vec4<f32> = textureSample(t_diffuse, s_diffuse, in.tex_coords);
+    let object_normal: vec4<f32> = textureSample(t_normal, s_normal, in.tex_coords);
 
     let ambient_strength = 0.1;
     let ambient_color = light.color * ambient_strength;
 
+    let tangent_normal = object_normal.xyz * 2.0 - 1.0;
     let light_dir = normalize(light.position - in.world_position);
     let view_dir = normalize(camera.view_pos.xyz - in.world_position);
-    let reflect_dir = reflect(-light_dir, in.world_normal);
+    let half_dir = normalize(view_dir + light_dir);
+    //let reflect_dir = reflect(-light_dir, in.world_normal);
 
-    let specular_strength = pow(max(dot(view_dir, reflect_dir), 0.0), 32.0);
+    let specular_strength = pow(max(dot(tangent_normal, half_dir), 0.0), 32.0);
     let specular_color = specular_strength * light.color;
 
-    let diffuse_strength = max(dot(in.world_normal, light_dir), 0.0);
+    let diffuse_strength = max(dot(tangent_normal, light_dir), 0.0);
     let diffuse_color = light.color * diffuse_strength;
 
     let result = (ambient_color + diffuse_color + specular_color) * object_color.xyz;

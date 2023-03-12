@@ -93,19 +93,21 @@ impl State {
 		let camera_bind_group = camera::create_camera_bind_group(&device, &camera_bind_group_layout, &camera_buffer);
 		let camera_controller = CameraController::new(0.6);
 
-		const NUM_INSTANCES_PER_ROW: u32 = 1;
-		const INSTANCE_DISPLACEMENT: cgmath::Vector3<f32> = cgmath::Vector3::new(NUM_INSTANCES_PER_ROW as f32 * 0.5, 0.0, NUM_INSTANCES_PER_ROW as f32 * 0.5);
-		const SPACE_BETWEEN: f32 = 3.0;
-
+		const NUM_INSTANCES_PER_ROW: u32 = 3;
+		const SPACE_BETWEEN: f32 = 2.0;
+		const INSTANCE_DISPLACEMENT: cgmath::Vector3<f32> = cgmath::Vector3::new(NUM_INSTANCES_PER_ROW as f32 * SPACE_BETWEEN /2.0, 0.0, NUM_INSTANCES_PER_ROW as f32 * SPACE_BETWEEN / 2.0);
 		let instances = (0..NUM_INSTANCES_PER_ROW).flat_map(|z| {
 			(0..NUM_INSTANCES_PER_ROW).map(move |x| {
-				let x = SPACE_BETWEEN * (x as f32 - NUM_INSTANCES_PER_ROW as f32 / 2.0);
-				let z = SPACE_BETWEEN * (z as f32 - NUM_INSTANCES_PER_ROW as f32 / 2.0);
+				println!("x -> {x:?} | z -> {z:?}");
+				//println!("{SPACE_BETWEEN:?} * ({x:?} as f32 - {NUM_INSTANCES_PER_ROW:?} as f32) / 2.0");
+				//println!("{SPACE_BETWEEN:?} * ({x:?} as f32 - {NUM_INSTANCES_PER_ROW:?} as f32) / 2.0");
 				
-				let position = cgmath::Vector3 { x, y: 0.0, z};// - INSTANCE_DISPLACEMENT;
-				
+				let x = x as f32 * SPACE_BETWEEN;
+				let z = z as f32 * SPACE_BETWEEN;
+				let position = cgmath::Vector3 { x, y: 0.0, z} - INSTANCE_DISPLACEMENT;
+				println!("x:{x:?},z:{z:?}  --- pos: {position:?}");
 				let rotation = cgmath::Quaternion::from_axis_angle((0.0, 1.0, 0.0).into(), cgmath::Deg(0.0));
-
+				
 				instance::Instance {
 					position, rotation,
 				}
@@ -154,7 +156,7 @@ impl State {
 		);
 		 
 		let obj_model =
-			resources::load_model("SceneTrackmania.obj", &device, &queue, &texture_bind_group_layout)
+			resources::load_model("cube.obj", &device, &queue, &texture_bind_group_layout)
 				.await
 				.unwrap();
 
@@ -226,12 +228,12 @@ impl State {
 
 		light::update_light(&mut self.light_uniform);
 		self.queue.write_buffer(&self.light_buffer, 0, bytemuck::cast_slice(&[self.light_uniform]));
+		/*
 		let mut instance_data: Vec<InstanceRaw> = Vec::new();
 		for temp_instance in self.instances.iter_mut() {
 			temp_instance.rotation = temp_instance.rotation * cgmath::Quaternion::from_axis_angle((0.0, 1.0, 0.0).into(), cgmath::Deg(1.0));
 			instance_data.push(temp_instance.to_raw());
 		}
-
 		self.instance_buffer = self.device.create_buffer_init(
 			&wgpu::util::BufferInitDescriptor {
 				label: Some("Instance Buffer"),
@@ -239,6 +241,7 @@ impl State {
 				usage: wgpu::BufferUsages::VERTEX,
 			}
 		);
+		*/
 
     }
 

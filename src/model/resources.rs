@@ -30,32 +30,30 @@ pub async fn load_model(
         },
     ).await?;
 
-    println!("after load obj bufsync");
-
     let mut materials = Vec::new();
     for m in obj_materials? {
-        println!("materialname: {}, {}", m.name,m.diffuse_texture);
+        println!("{:?}", m);
+        println!("Material name: {}, texture file: {}, normal: {}", m.name, m.diffuse_texture, m.normal_texture);
         let diffuse_texture = load_texture(&m.diffuse_texture, device, queue).await?;
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&diffuse_texture.view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
-                },        
-            ],
-            label: None,
-        });
-        println!("Material Name: {}", m.name);
-        materials.push(model::Material {
-            name: m.name,
+        let mut normal_texture_file_name = m.normal_texture;
+        if normal_texture_file_name.eq("") {
+            normal_texture_file_name = String::from("cube-normal.png");
+        }else if normal_texture_file_name.contains(" ") {
+            while normal_texture_file_name.contains(" ") {
+                let space_loc = normal_texture_file_name.find(" ").unwrap();
+                normal_texture_file_name.replace_range(..space_loc+1, "");
+            }
+            println!("Trimmed normal filename: {}", normal_texture_file_name);
+        }
+        let normal_texture = load_texture(&normal_texture_file_name, device, queue).await?;
+        
+        materials.push(model::Material::new(
+            device,
+            &m.name,
             diffuse_texture,
-            bind_group,
-        })
+            normal_texture,
+            layout,
+        ));
     }
 
     let meshes = models

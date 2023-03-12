@@ -37,19 +37,19 @@ impl CameraController {
             } => {
                 let is_pressed = *state == ElementState::Pressed;
                 match keycode {
-                    VirtualKeyCode::W | VirtualKeyCode::Up => {
+                    VirtualKeyCode::U | VirtualKeyCode::Up => {
                         self.is_forward_pressed = is_pressed;
                         true
                     }
-                    VirtualKeyCode::A | VirtualKeyCode::Left => {
-                        self.is_left_pressed = is_pressed;
-                        true
-                    }
-                    VirtualKeyCode::S | VirtualKeyCode::Down => {
+                    VirtualKeyCode::O | VirtualKeyCode::Down => {
                         self.is_backward_pressed = is_pressed;
                         true
                     }
-                    VirtualKeyCode::D | VirtualKeyCode::Right => {
+                    VirtualKeyCode::Q | VirtualKeyCode::Left => {
+                        self.is_left_pressed = is_pressed;
+                        true
+                    }
+                    VirtualKeyCode::K | VirtualKeyCode::Right => {
                         self.is_right_pressed = is_pressed;
                         true
                     }
@@ -57,7 +57,7 @@ impl CameraController {
                         self.is_up_pressed = is_pressed;
                         true
                     }
-                    VirtualKeyCode::Q => {
+                    VirtualKeyCode::J => {
                         self.is_down_pressed = is_pressed;
                         true
                     }
@@ -107,6 +107,7 @@ impl CameraController {
         }
         if self.is_down_pressed {
             camera.eye = camera.target - (forward - horizontal * self.speed).normalize() * forward_mag;
+            println!("{:?}", camera.eye);
         }
     }
 }
