@@ -105,16 +105,16 @@ pub struct LightUniform {
 pub fn update_light(light_uniform: &mut LightUniform) {
     let old_position: cgmath::Vector3<_> = light_uniform.position.into();
     light_uniform.position = (
-        cgmath::Quaternion::from_axis_angle((0.0, 1.0, 0.0).into(), cgmath::Deg(0.0))
-            * old_position
+        cgmath::Quaternion::from_axis_angle((0.0, 1.0, 0.0).into(), cgmath::Deg(1.0))
+        * old_position
     ).into();
 }
 
 pub fn create_light_uniform() -> LightUniform {
     LightUniform {
-        position: [15.0, 3.0, 0.0],
+        position: [2.0, 2.0, 2.0],
         _padding: 0,
-        color: [1.0, 0.8, 0.8],
+        color: [1.0, 1.0, 1.0],
         _padding2: 0,
     }
 }

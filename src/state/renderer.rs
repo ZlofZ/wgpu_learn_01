@@ -25,9 +25,9 @@ pub fn create_render_pipeline_layout(device: &wgpu::Device, texture_bind_group_l
     device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("Render Pipeline Layout"),
         bind_group_layouts: &[
-            &texture_bind_group_layout,
-            &camera_bind_group_layout,
-            &light_bind_group_layout,
+            texture_bind_group_layout,
+            camera_bind_group_layout,
+            light_bind_group_layout,
         ],
         push_constant_ranges: &[],
     })

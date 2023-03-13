@@ -93,25 +93,33 @@ impl State {
 		let camera_bind_group = camera::create_camera_bind_group(&device, &camera_bind_group_layout, &camera_buffer);
 		let camera_controller = CameraController::new(0.6);
 
-		const NUM_INSTANCES_PER_ROW: u32 = 3;
-		const SPACE_BETWEEN: f32 = 2.0;
-		const INSTANCE_DISPLACEMENT: cgmath::Vector3<f32> = cgmath::Vector3::new(NUM_INSTANCES_PER_ROW as f32 * SPACE_BETWEEN /2.0, 0.0, NUM_INSTANCES_PER_ROW as f32 * SPACE_BETWEEN / 2.0);
-		let instances = (0..NUM_INSTANCES_PER_ROW).flat_map(|z| {
-			(0..NUM_INSTANCES_PER_ROW).map(move |x| {
-				println!("x -> {x:?} | z -> {z:?}");
-				//println!("{SPACE_BETWEEN:?} * ({x:?} as f32 - {NUM_INSTANCES_PER_ROW:?} as f32) / 2.0");
-				//println!("{SPACE_BETWEEN:?} * ({x:?} as f32 - {NUM_INSTANCES_PER_ROW:?} as f32) / 2.0");
-				
-				let x = x as f32 * SPACE_BETWEEN;
-				let z = z as f32 * SPACE_BETWEEN;
-				let position = cgmath::Vector3 { x, y: 0.0, z} - INSTANCE_DISPLACEMENT;
-				println!("x:{x:?},z:{z:?}  --- pos: {position:?}");
-				let rotation = cgmath::Quaternion::from_axis_angle((0.0, 1.0, 0.0).into(), cgmath::Deg(0.0));
-				
-				instance::Instance {
-					position, rotation,
-				}
-			})
+		const NUM_INSTANCES_PER_ROW: u32 = 10;
+		const SPACE_BETWEEN: f32 = 3.0;
+
+		let instances = (0..NUM_INSTANCES_PER_ROW)
+			.flat_map(|z| {
+				(0..NUM_INSTANCES_PER_ROW).map(move |x| {
+					println!("x -> {x:?} | z -> {z:?}");
+					
+					let x = SPACE_BETWEEN * (x as f32 - NUM_INSTANCES_PER_ROW as f32 / 2.0);
+                    let z = SPACE_BETWEEN * (z as f32 - NUM_INSTANCES_PER_ROW as f32 / 2.0);
+
+					let position = cgmath::Vector3 { x, y: 0.0, z};
+					println!("x:{x:?},z:{z:?}  --- pos: {position:?}");
+					
+					let rotation = if position.is_zero() {
+						cgmath::Quaternion::from_axis_angle(
+							cgmath::Vector3::unit_z(),
+							cgmath::Deg(0.0),
+						)
+					} else {
+						cgmath::Quaternion::from_axis_angle(position.normalize(), cgmath::Deg(45.0))
+					};
+					
+					instance::Instance {
+						position, rotation,
+					}
+				})
 		}).collect::<Vec<_>>();
 
 		let instance_data = instances.iter().map(Instance::to_raw).collect::<Vec<_>>();
@@ -126,10 +134,15 @@ impl State {
 		let depth_texture = texture::Texture::create_depth_texture(&device, &config, "depth_texture");
 
         let bg_color = wgpu::Color {
+			r: 0.1,
+			g: 0.2,
+            b: 0.3,
+            a: 1.0,
+/*
 			r: 0.005,
 			g: 0.005,
 			b: 0.005,
-			a: 1.0,
+			a: 1.0,*/
 		};
         
 		let shader = wgpu::ShaderModuleDescriptor {
@@ -141,9 +154,13 @@ impl State {
 		let light_buffer = light::create_light_buffer(&device, light_uniform);
 		let light_bind_group_layout = light::create_light_bind_group_layout(&device);
 		let light_bind_group = light::create_light_bind_group(&device, &light_bind_group_layout, &light_buffer);
-		let light_render_pipeline = light::create_light_render_pipeline(&device, &config, &camera_bind_group_layout, &light_bind_group_layout);
 
-		let render_pipeline_layout = state::renderer::create_render_pipeline_layout(&device, &texture_bind_group_layout, &camera_bind_group_layout, &light_bind_group_layout);
+		let render_pipeline_layout = state::renderer::create_render_pipeline_layout(
+			&device,
+			&texture_bind_group_layout,
+			&camera_bind_group_layout,
+			&light_bind_group_layout
+		);
 
 		let render_pipeline = state::renderer::create_render_pipeline(
 			&device,
@@ -154,9 +171,18 @@ impl State {
 			shader,
 			Some("Default Render Pipeline")
 		);
-		 
+		
+
+		let light_render_pipeline = light::create_light_render_pipeline(
+			&device,
+			&config,
+			&camera_bind_group_layout,
+			&light_bind_group_layout
+		);
+
+
 		let obj_model =
-			resources::load_model("cube.obj", &device, &queue, &texture_bind_group_layout)
+			resources::load_model("SceneTrackmania.obj", &device, &queue, &texture_bind_group_layout)
 				.await
 				.unwrap();
 
@@ -228,10 +254,17 @@ impl State {
 
 		light::update_light(&mut self.light_uniform);
 		self.queue.write_buffer(&self.light_buffer, 0, bytemuck::cast_slice(&[self.light_uniform]));
-		/*
+		
 		let mut instance_data: Vec<InstanceRaw> = Vec::new();
 		for temp_instance in self.instances.iter_mut() {
-			temp_instance.rotation = temp_instance.rotation * cgmath::Quaternion::from_axis_angle((0.0, 1.0, 0.0).into(), cgmath::Deg(1.0));
+			temp_instance.rotation = if temp_instance.position.is_zero() {
+				cgmath::Quaternion::from_axis_angle(
+					cgmath::Vector3::unit_z(),
+					cgmath::Deg(1.0),
+				)*temp_instance.rotation
+			} else {
+				cgmath::Quaternion::from_axis_angle(temp_instance.position.normalize(), cgmath::Deg(1.0))*temp_instance.rotation
+			};
 			instance_data.push(temp_instance.to_raw());
 		}
 		self.instance_buffer = self.device.create_buffer_init(
@@ -241,7 +274,7 @@ impl State {
 				usage: wgpu::BufferUsages::VERTEX,
 			}
 		);
-		*/
+		
 
     }
 
